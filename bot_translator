@@ -1,0 +1,62 @@
+import telebot
+import sqlite3
+from telebot import types
+from googletrans import Translator
+
+bot = telebot.TeleBot('token')
+
+conn = sqlite3.connect("mydatabase.db", check_same_thread=False)
+cursor = conn.cursor()
+
+
+class Human:
+    """Инициализация пользователя"""
+
+    def __init__(self, id, first_name):
+        self.id = id
+        self.first_name = first_name
+
+
+def keyboard_first():
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    button1 = types.KeyboardButton('Режим 1')
+    markup.add(button1)
+    return markup
+
+
+@bot.message_handler(commands=['start'])
+def start_message(message):
+    bot.send_message(message.chat.id, 'Приветствую, ' + message.from_user.first_name +
+                    ". Я использую для перевода Google Translate.")
+    bot.send_message(message.chat.id, 'Твой бот-переводчик🤗', reply_markup=keyboard_first())
+
+    user = Human(message.chat.id, message.from_user.first_name)
+
+    sql = "SELECT id FROM orders WHERE id =?"
+    cursor.execute(sql, [(user.id)])
+    check = cursor.fetchone()
+    if check is None:
+        cursor.execute("INSERT INTO orders VALUES (?,?)", (user.id, user.first_name))
+        conn.commit()
+
+		
+@bot.message_handler(content_types=["text"])
+def translate(message):
+    sql = "SELECT first_name FROM orders WHERE group_id = ?" 
+    cursor.execute(sql, [(message.chat.id)])
+    check = cursor.fetchone()
+    msg = message.text
+    if msg == 'Режим 1':
+        bot.send_message(message.chat.id, "Ты уже используешь Режим 1😌")
+        return
+    translator = Translator()
+    for i in range(65, 122):
+        if msg.startswith(chr(i)):
+            result = translator.translate(msg, src='en', dest='ru')
+            break
+    else:
+        result = translator.translate(msg, src='ru', dest='en')	
+    bot.send_message(message.chat.id, result.text)
+
+
+bot.polling()
